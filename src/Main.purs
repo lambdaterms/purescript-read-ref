@@ -1,42 +1,54 @@
-module Main where
+module Main
+  ( main
+  , modify
+  , modify'
+  , new
+  , read
+  , ReadRef
+  , write
+  , WriteRef
+  )
+  where
 
 import Prelude
 
-import Control.Apply ((*>))
-import Control.Bind (bind, pure)
-import Data.Symbol (SProxy(..))
-import Debug.Trace (traceM)
 import Effect (Effect)
-import Effect.Class.Console (log)
+import Effect.Console (log)
 import Unsafe.Coerce (unsafeCoerce)
+
+foreign import data Ref ∷ Type → Type
 
 foreign import data ReadRef ∷ Type → Type
 
-newtype RefMutation h a = RefMutation ((a → a) → Effect a)
+foreign import data WriteRef ∷ Type → Type → Type
 
-foreign import new ∷ ∀ h a. a → Effect {ref ∷ ReadRef a, mutation ∷ RefMutation h a}
+foreign import newRef ∷ ∀ a. a → Effect (Ref a)
+
+new ∷ ∀ a b. a → (∀ h. WriteRef h a → b) → Effect { readRef ∷ ReadRef a, mutator ∷ b }
+new val m = do
+  ref ← newRef val
+  -- XXX: It could be done without `unsafe` just by returning
+  --      the same value twice from FFI
+  pure { readRef: unsafeCoerce ref, mutator: m (unsafeCoerce ref)}
+
 foreign import read ∷ ∀ a. ReadRef a → Effect a
 
-newRefMutator ∷ ∀ a b. a → (∀ h. RefMutation h a → b) → Effect {ref ∷ ReadRef a, mutator ∷ b}
-newRefMutator val mut = do
-  {ref, mutation} ← new val
-  pure { ref, mutator: (unsafeCoerce mut) mutation }
+foreign import modify ∷ ∀ a h. WriteRef h a → (a → a) → Effect a
 
-mutateRef ∷ ∀ h a. RefMutation h a → (a → a) → Effect a
-mutateRef (RefMutation x) f = log "mutating" *> x f
+foreign import modify' ∷ ∀ a b h. WriteRef h a → (a → { state ∷ a, value ∷ b }) → Effect b
 
--- XXX: you are not able to return `r` here
-mutatingComponent r = do
-  x ← mutateRef r (const "new")
-  pure x
+foreign import write ∷ ∀ a h. WriteRef h a → a → Effect Unit
+
+mutator ∷ ∀ h. WriteRef h String → Effect _
+mutator ref = do
+  log "writing to ref"
+  write ref "new"
+  -- XXX: this won't work
+  -- pure ref
 
 main ∷ Effect Unit
 main = do
-  { ref, mutator } ← newRefMutator "initial" mutatingComponent
-
-  mutator >>= log
-
-  pure unit
-
-
-
+  { readRef, mutator: m } ← new "initial" mutator
+  read readRef >>= log
+  h ← m
+  read readRef >>= log
