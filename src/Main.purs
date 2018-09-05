@@ -6,7 +6,7 @@ module Main
   , read
   , ReadRef
   , write
-  , WriteRef
+  , Ref
   )
   where
 
@@ -16,15 +16,16 @@ import Effect (Effect)
 import Effect.Console (log)
 import Unsafe.Coerce (unsafeCoerce)
 
-foreign import data Ref ∷ Type → Type
+foreign import data Ref ∷ Type → Type → Type
 
 foreign import data ReadRef ∷ Type → Type
 
-foreign import data WriteRef ∷ Type → Type → Type
+toReadRef ∷ ∀ a h. Ref h a → ReadRef a
+toReadRef = unsafeCoerce
 
-foreign import newRef ∷ ∀ a. a → Effect (Ref a)
+foreign import newRef ∷ ∀ a h. a → Effect (Ref h a)
 
-new ∷ ∀ a b. a → (∀ h. WriteRef h a → b) → Effect { readRef ∷ ReadRef a, mutator ∷ b }
+new ∷ ∀ a b. a → (∀ h. Ref h a → b) → Effect { readRef ∷ ReadRef a, mutator ∷ b }
 new val m = do
   ref ← newRef val
   -- XXX: It could be done without `unsafe` just by returning
@@ -33,16 +34,20 @@ new val m = do
 
 foreign import read ∷ ∀ a. ReadRef a → Effect a
 
-foreign import modify ∷ ∀ a h. WriteRef h a → (a → a) → Effect a
+foreign import modify ∷ ∀ a h. Ref h a → (a → a) → Effect a
 
-foreign import modify' ∷ ∀ a b h. WriteRef h a → (a → { state ∷ a, value ∷ b }) → Effect b
+foreign import modify' ∷ ∀ a b h. Ref h a → (a → { state ∷ a, value ∷ b }) → Effect b
 
-foreign import write ∷ ∀ a h. WriteRef h a → a → Effect Unit
+foreign import write ∷ ∀ a h. Ref h a → a → Effect Unit
 
-mutator ∷ ∀ h. WriteRef h String → Effect _
+mutator ∷ ∀ h. Ref h String → Effect _
 mutator ref = do
   log "writing to ref"
   write ref "new"
+
+  log "reading from mutator"
+  v ← read (toReadRef ref)
+  log v
   -- XXX: this won't work
   -- pure ref
 
