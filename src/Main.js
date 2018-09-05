@@ -14,9 +14,6 @@ exports.new = function (s){
   };
 };
 
-exports.unsafeCoerce1 = function(f) {
-  return f(null);
-}
 
 exports.read = function (ref) {
   return function () {
