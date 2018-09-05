@@ -32,7 +32,14 @@ mutateRef ∷ ∀ h a. RefMutation h a → (a → a) → Effect a
 mutateRef (RefMutation x) f = log "mutating" *> x f
 
 -- logEight ∷ (RefMutation "TEST" Int) → Effect Unit
-logEight (RefMutation refMutation1) (RefMutation rM2) = do -- (RefMutation refMutation2) = do
+logEight (RefMutation refMutation1) = do -- (RefMutation rM2) = do -- (RefMutation refMutation2) = do
+  x ← refMutation1 (const 8)
+  log "log"
+  log (show x)
+  pure unit
+
+-- logEight ∷ (RefMutation "TEST" Int) → Effect Unit
+badLogEight (RefMutation refMutation1) (RefMutation rM2) = do -- (RefMutation refMutation2) = do
   x ← refMutation1 (const 8)
   log "log"
   log (show x)
@@ -42,9 +49,12 @@ logEight (RefMutation refMutation1) (RefMutation rM2) = do -- (RefMutation refMu
 main ∷ Effect Unit
 main = do
   { ref, mutator } ∷ _ ← newRefMutator 8 logEight
-  pure unit
-  { ref, mutator: m } ← newRefMutator "STRING" mutator
+  mutator
+  { ref: ref2, mutator: mutator2 } ∷ _ ← newRefMutator 8 badLogEight
+  -- { ref, mutator: m } ← newRefMutator "STRING" mutator2
   -- m
   log "BLBL"
+  pure unit
+
 
 
