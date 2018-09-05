@@ -25,17 +25,17 @@ newRefMutator val mut = do
 mutateRef ∷ ∀ h a. RefMutation h a → (a → a) → Effect a
 mutateRef (RefMutation x) f = log "mutating" *> x f
 
-mutatingComponent r = r
-  -- XXX: you are not able to return r
-
+-- XXX: you are not able to return `r` here
+mutatingComponent r = do
+  x ← mutateRef r (const "new")
+  pure x
 
 main ∷ Effect Unit
 main = do
-  { ref, mutator } ∷ _ ← newRefMutator 8 mutatingComponent
+  { ref, mutator } ← newRefMutator "initial" mutatingComponent
 
-  traceM mutator
+  mutator >>= log
 
-  log "BLBL"
   pure unit
 
 
