@@ -28,8 +28,6 @@ foreign import newRef ∷ ∀ a h. a → Effect (Ref h a)
 new ∷ ∀ a b. a → (∀ h. Ref h a → b) → Effect { readRef ∷ ReadRef a, mutator ∷ b }
 new val m = do
   ref ← newRef val
-  -- XXX: It could be done without `unsafe` just by returning
-  --      the same value twice from FFI
   pure { readRef: toReadRef ref, mutator: m ref}
 
 foreign import read ∷ ∀ a. ReadRef a → Effect a
