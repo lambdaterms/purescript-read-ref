@@ -9,7 +9,6 @@ exports.newRef = function (val) {
 };
 
 exports.write = function (ref) {
-  // precache unit value
   return function(val) {
     return function () {
       ref.value = val;
