@@ -30,7 +30,7 @@ new val m = do
   ref ← newRef val
   -- XXX: It could be done without `unsafe` just by returning
   --      the same value twice from FFI
-  pure { readRef: unsafeCoerce ref, mutator: m (unsafeCoerce ref)}
+  pure { readRef: toReadRef ref, mutator: m (unsafeCoerce ref)}
 
 foreign import read ∷ ∀ a. ReadRef a → Effect a
 
